@@ -24,28 +24,28 @@ interface IUniswapV2Router02 {
         address[] calldata path,
         address to,
         uint deadline
-    ) external returns (uint[] memory amounts);
+        ) external returns (uint[] memory amounts);
     function swapTokensForExactTokens(
         uint amountOut,
         uint amountInMax,
         address[] calldata path,
         address to,
         uint deadline
-    ) external returns (uint[] memory amounts);
+        ) external returns (uint[] memory amounts);
     function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
-        external
-        payable
-        returns (uint[] memory amounts);
+    external
+    payable
+    returns (uint[] memory amounts);
     function swapTokensForExactETH(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline)
-        external
-        returns (uint[] memory amounts);
+    external
+    returns (uint[] memory amounts);
     function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
-        external
-        returns (uint[] memory amounts);
+    external
+    returns (uint[] memory amounts);
     function swapETHForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline)
-        external
-        payable
-        returns (uint[] memory amounts);
+    external
+    payable
+    returns (uint[] memory amounts);
 }
 
 
@@ -61,47 +61,47 @@ contract Fund is ERC20, Ownable {
   //IUniswapV2Router02 private constant sushiRouter = IUniswapV2Router02(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506);
   address public sushiRouterAddress=0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
 
-    struct UserInfo {
-        uint orderID;
-        address payable UserAddress;
-        uint InvestAmount;
+  struct UserInfo {
+    uint orderID;
+    address payable UserAddress;
+    uint InvestAmount;
 
-    }
-    mapping(uint256 => UserInfo) public Users;
-    mapping(address => uint) public Userid;
+}
+mapping(uint256 => UserInfo) public Users;
+mapping(address => uint) public Userid;
 
-   address[] public AllowTokens=[0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063,0xc2132D05D31c914a87C6611C10748AEb04B58e8F];
- 
-
-
- //uint public LockTimeDays;
-
-    uint public UserCount;
-    uint public MinProfit=100;
-    uint public  FeePercent = 5;
-    uint public PoolBalance;
+address[] public AllowTokens=[0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063,0xc2132D05D31c914a87C6611C10748AEb04B58e8F];
 
 
 
+uint public LockTimeDays=3;
 
-
-    ERC20 public USDToken ;
-    
-    address ContractOwner;
-
-    modifier noReentrant() {
-      require(!locked, "No re-entrancy");
-      locked = true;
-      _;
-      locked = false;
-  }
+uint public UserCount;
+uint public MinProfit=100;
+uint public  FeePercent = 5;
+uint public PoolBalance;
 
 
 
-  constructor(address _USD) ERC20("Fund", "FUND") {
+
+
+ERC20 public USDToken ;
+
+address ContractOwner;
+
+modifier noReentrant() {
+  require(!locked, "No re-entrancy");
+  locked = true;
+  _;
+  locked = false;
+}
+
+
+
+constructor(address _USD) ERC20("Fund", "FUND") {
     USDToken=ERC20(_USD);
   //  _mint(msg.sender, initialSupply);
-    ContractOwner=msg.sender;
+  ContractOwner=msg.sender;
 }
 
 function depositUSDToken (uint256 amount) public noReentrant{
@@ -119,10 +119,10 @@ _mint(msg.sender, amount);       // minting same amount of tokens to for simplic
 
 bool InvestorExist=false;
 for (uint i; i < UserCount; i++) {
-   if (Users[i].UserAddress == msg.sender){
-       Users[i].InvestAmount += amount;
-       InvestorExist=true;
-   }
+ if (Users[i].UserAddress == msg.sender){
+     Users[i].InvestAmount += amount;
+     InvestorExist=true;
+ }
 }
 
 if (!InvestorExist){
@@ -131,7 +131,7 @@ if (!InvestorExist){
     Users[UserCount].UserAddress =payable (msg.sender) ;
 }
 
-LockTime[msg.sender]=block.timestamp + 3 minutes;
+LockTime[msg.sender]=block.timestamp + LockTimeDays * 1 minutes;
 
 PoolBalance += amount;
 UserCount++;
@@ -151,11 +151,11 @@ function Withdraw() external noReentrant{
     Users[Userid[msg.sender]].InvestAmount=0;
 
 
-require(PoolBalance >= _shares, "PoolBalance >= _shares");
+    require(PoolBalance >= _shares, "PoolBalance >= _shares");
 
 //update pool
-    PoolBalance -=_shares;
-    emit WithdrawEvent(msg.sender, _shares);
+PoolBalance -=_shares;
+emit WithdrawEvent(msg.sender, _shares);
 }
 
 
@@ -168,21 +168,27 @@ function DistributeProfit( ) external  onlyOwner{
     require(TotalProfit > MinProfit, "No profit");
     
     for (uint i; i < UserCount; i++) { 
-        require(Users[UserCount].InvestAmount > 0,"user have no invest.");
-        uint  profit= Users[UserCount].InvestAmount *  USDToken.balanceOf(address(this)) / totalSupply() ; 
+        require(Users[i].InvestAmount > 0,"user have no invest.");
+        uint  profit= Users[i].InvestAmount *  USDToken.balanceOf(address(this)) / totalSupply() ; 
         uint Fee=(FeePercent * profit) / 100 ;
         uint UserProfit=profit - Fee;
 
-        USDToken.transfer(Users[UserCount].UserAddress, UserProfit);
+        //send profit
+        USDToken.transfer(Users[i].UserAddress, UserProfit);
+
+        //send fee
+        USDToken.transfer(msg.sender, Fee);
 
     }
+
+
 
 
 }
 
 function ShowProfit(address _user) public view returns (uint) {
     uint profit =  Users[Userid[_user]].InvestAmount * USDToken.balanceOf(address(this)) / totalSupply() ; 
-    uint Fee=(5 * profit) / 100 ;
+    uint Fee=(FeePercent * profit) / 100 ;
     uint UserProfit=profit - Fee;
     return  UserProfit;
 
@@ -190,7 +196,7 @@ function ShowProfit(address _user) public view returns (uint) {
 
 function ShowARR() public view returns (uint) { 
     require(USDToken.balanceOf(address(this)) > PoolBalance ,"err");
-   return     ((USDToken.balanceOf(address(this)) -  PoolBalance ) / PoolBalance )*1000;
+    return     ((USDToken.balanceOf(address(this)) -  PoolBalance ) / PoolBalance )*1000;
 
 }
 
@@ -200,27 +206,27 @@ function Swap(
     address ToTokenAddress,uint TradeAmount
     ) external  onlyOwner {
 
-     require(TradeAmount<=IERC20(FromTokenAddress).balanceOf(address(this)), "Token on contract is not enough");
-      _TokenToTokenV2(Router,TradeAmount, 1,FromTokenAddress,ToTokenAddress);
+   require(TradeAmount<=IERC20(FromTokenAddress).balanceOf(address(this)), "Token on contract is not enough");
+   _TokenToTokenV2(Router,TradeAmount, 1,FromTokenAddress,ToTokenAddress);
 }
 
 
 function _TokenToTokenV2(address _RouterAddress, uint256 amountIn, 
-uint256 amountOutMin ,address FromTokenAddress,address ToTokenAddress) public {
-   
-IERC20(FromTokenAddress).approve(_RouterAddress, type(uint256).max);
+    uint256 amountOutMin ,address FromTokenAddress,address ToTokenAddress) public {
  
-uint256 deadline = block.timestamp + 300; 
+    IERC20(FromTokenAddress).approve(_RouterAddress, type(uint256).max);
+    
+    uint256 deadline = block.timestamp + 300; 
 
-   IUniswapV2Router02    Router = IUniswapV2Router02(_RouterAddress);
-  
+    IUniswapV2Router02    Router = IUniswapV2Router02(_RouterAddress);
+    
     Router.swapExactTokensForTokens(
         amountIn,
         amountOutMin,
         _getPath(FromTokenAddress,ToTokenAddress),
         address(this),
         deadline
-    );
+        );
 }
 function _getPath(address a,address b) public pure returns (address[] memory) {
     
