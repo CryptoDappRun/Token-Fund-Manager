@@ -10,7 +10,7 @@ https://cryptodapprun.github.io/Token-Fund-Manager/
 Contract:
 https://bscscan.com/address/0x2664e2fded90ce760905d8accfb1e2f12934de02
 
-<img src="https://github.com/CryptoDappRun/Token-Fund-Manager/blob/main/screen.png">
+<img src="screen.png">
 
 
 
